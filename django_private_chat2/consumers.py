@@ -63,6 +63,7 @@ class MessageTypes(enum.IntEnum):
     ErrorOccurred = 7
     MessageIdCreated = 8
     NewUnreadCount = 9
+    TypingStopped = 10
 
 
 @database_sync_to_async
@@ -179,6 +180,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 for d in dialogs:
                     if str(d) != self.group_name:
                         await self.channel_layer.group_send(str(d), {"type": "is_typing",
+                                                                     "user_pk": str(self.user.pk)})
+                return None
+            elif msg_type == MessageTypes.TypingStopped:
+                dialogs = await get_groups_to_add(self.user)
+                logger.info(f"User {self.user.pk} has stopped typing, sending 'stopped_typing' to {dialogs} dialog groups")
+                for d in dialogs:
+                    if str(d) != self.group_name:
+                        await self.channel_layer.group_send(str(d), {"type": "stopped_typing",
                                                                      "user_pk": str(self.user.pk)})
                 return None
             elif msg_type == MessageTypes.MessageRead:
@@ -396,6 +405,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.IsTyping,
+                'user_pk': event['user_pk']
+            }))
+
+    async def stopped_typing(self, event):
+        await self.send(
+            text_data=json.dumps({
+                'msg_type': MessageTypes.TypingStopped,
                 'user_pk': event['user_pk']
             }))
 
