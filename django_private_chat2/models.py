@@ -36,22 +36,11 @@ class DialogsModel(TimeStampedModel):
                               related_name="+", db_index=True)
     user2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name=_("User2"),
                               related_name="+", db_index=True)
-    updated = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_('updated at'),
-    )
 
     class Meta:
         unique_together = (('user1', 'user2'), ('user2', 'user1'))
         verbose_name = _("Dialog")
         verbose_name_plural = _("Dialogs")
-        ordering = ("-updated",)
-        indexes = (
-            models.Index(
-                fields=("-updated",),
-                name="private_chat_dialog_update_idx",
-            ),
-        )
 
     def __str__(self):
         return _("Dialog between ") + f"{self.user1_id}, {self.user2_id}"
@@ -68,7 +57,7 @@ class DialogsModel(TimeStampedModel):
             return
 
         for dialog in res:
-            dialog.save(update_fields=('updated',))
+            dialog.save(update_fields=('modified',))
 
     @staticmethod
     def get_dialogs_for_user(user: AbstractBaseUser):
