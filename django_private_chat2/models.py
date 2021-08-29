@@ -36,11 +36,22 @@ class DialogsModel(TimeStampedModel):
                               related_name="+", db_index=True)
     user2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name=_("User2"),
                               related_name="+", db_index=True)
+    updated = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_('updated at'),
+    )
 
     class Meta:
         unique_together = (('user1', 'user2'), ('user2', 'user1'))
         verbose_name = _("Dialog")
         verbose_name_plural = _("Dialogs")
+        ordering = ("-updated",)
+        indexes = (
+            models.Index(
+                fields=("-updated",),
+                name="private_chat_dialog_update_idx",
+            ),
+        )
 
     def __str__(self):
         return _("Dialog between ") + f"{self.user1_id}, {self.user2_id}"
@@ -54,6 +65,10 @@ class DialogsModel(TimeStampedModel):
         res = DialogsModel.dialog_exists(u1, u2)
         if not res:
             DialogsModel.objects.create(user1=u1, user2=u2)
+            return
+
+        for dialog in res:
+            dialog.save(update_fields=('updated',))
 
     @staticmethod
     def get_dialogs_for_user(user: AbstractBaseUser):
@@ -69,6 +84,12 @@ class MessageModel(TimeStampedModel, SoftDeletableModel):
     text = models.TextField(verbose_name=_("Text"), blank=True)
     file = models.ForeignKey(UploadedFile, related_name='message', on_delete=models.DO_NOTHING,
                              verbose_name=_("File"), blank=True, null=True)
+    pid = models.UUIDField(
+        unique=True,
+        editable=False,
+        default=uuid.uuid4,
+        verbose_name=_("public id")
+    )
 
     read = models.BooleanField(verbose_name=_("Read"), default=False)
     all_objects = models.Manager()
@@ -94,6 +115,12 @@ class MessageModel(TimeStampedModel, SoftDeletableModel):
         ordering = ('-created',)
         verbose_name = _("Message")
         verbose_name_plural = _("Messages")
+        indexes = (
+            models.Index(
+                fields=("pid",),
+                name="private_chat_message_pid_idx",
+            ),
+        )
 
 # TODO:
 # Possible features - update with pts
