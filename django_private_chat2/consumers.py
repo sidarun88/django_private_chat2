@@ -232,7 +232,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         await self.channel_layer.group_send(str(recipient.pk), {"type": "message_read",
                                                                                 "message_id": mid,
                                                                                 "sender": user_pk,
-                                                                                "receiver": self.group_name})
+                                                                                "receiver": self.sender_username})
                         msg_res: Optional[Tuple[str, str]] = await get_message_by_id(mid)
                         if not msg_res:
                             return ErrorTypes.InvalidMessageReadId, f"Message with pid {mid} does not exist"
