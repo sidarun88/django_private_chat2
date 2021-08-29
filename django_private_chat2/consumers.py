@@ -138,7 +138,7 @@ def image_url(user: AbstractBaseUser) -> str:
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def _after_message_save(self, msg: MessageModel, rid: int, user_pk: str):
-        ev = {"type": "message_id_created", "random_id": rid, "db_id": msg.pid}
+        ev = {"type": "message_id_created", "random_id": rid, "db_id": str(msg.pid)}
         logger.info(f"Message with id {msg.id} saved, firing events to {user_pk} & {self.group_name}")
         await self.channel_layer.group_send(user_pk, ev)
         await self.channel_layer.group_send(self.group_name, ev)
@@ -287,7 +287,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             logger.info(f"Sending file message for file {file_id} from {self.user} to {recipient}")
                             # We don't need to send random_id here because we've already saved the file to db
                             await self.channel_layer.group_send(str(recipient.pk), {"type": "new_file_message",
-                                                                                    "db_id": msg.pid,
+                                                                                    "db_id": str(msg.pid),
                                                                                     "file": serialize_file_model(file),
                                                                                     "sender": self.sender_username,
                                                                                     "receiver": user_pk,
