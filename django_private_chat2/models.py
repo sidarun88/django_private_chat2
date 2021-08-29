@@ -55,9 +55,7 @@ class DialogsModel(TimeStampedModel):
         if not res:
             DialogsModel.objects.create(user1=u1, user2=u2)
             return
-
-        for dialog in res:
-            dialog.save(update_fields=('modified',))
+        res.save(update_fields=('modified',))
 
     @staticmethod
     def get_dialogs_for_user(user: AbstractBaseUser):
