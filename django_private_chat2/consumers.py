@@ -79,7 +79,7 @@ def get_user_by_pk(pk: str) -> Awaitable[Optional[AbstractBaseUser]]:
 
 @database_sync_to_async
 def get_user_by_username(username: str) -> Awaitable[Optional[AbstractBaseUser]]:
-    return UserModel.objects.filter(username=username).only('id').first()
+    return UserModel.objects.filter(username=username).first()
 
 
 @database_sync_to_async
