@@ -228,19 +228,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         return ErrorTypes.InvalidUserPk, f"User with username {user_pk} does not exist"
                     else:
                         logger.info(
-                            f"Validation passed, marking msg from {recipient.pk} to {self.group_name} with id {mid} as read")
-                        await self.channel_layer.group_send(recipient.pk, {"type": "message_read",
-                                                                           "message_id": mid,
-                                                                           "sender": user_pk,
-                                                                           "receiver": self.group_name})
+                            f"Validation passed, marking msg from {recipient.pk} to {self.group_name} with pid {mid} as read")
+                        await self.channel_layer.group_send(str(recipient.pk), {"type": "message_read",
+                                                                                "message_id": mid,
+                                                                                "sender": user_pk,
+                                                                                "receiver": self.group_name})
                         msg_res: Optional[Tuple[str, str]] = await get_message_by_id(mid)
                         if not msg_res:
-                            return ErrorTypes.InvalidMessageReadId, f"Message with id {mid} does not exist"
-                        elif msg_res[0] != self.group_name or msg_res[1] != recipient.pk:
-                            return ErrorTypes.InvalidMessageReadId, f"Message with id {mid} was not sent by {user_pk} to {self.group_name}"
+                            return ErrorTypes.InvalidMessageReadId, f"Message with pid {mid} does not exist"
+                        elif msg_res[0] != self.group_name or msg_res[1] != str(recipient.pk):
+                            return ErrorTypes.InvalidMessageReadId, f"Message with pid {mid} was not sent by {recipient.pk} to {self.group_name}"
                         else:
                             await mark_message_as_read(mid)
-                            new_unreads = await get_unread_count(recipient.pk, self.group_name)
+                            new_unreads = await get_unread_count(str(recipient.pk), self.group_name)
                             await self.channel_layer.group_send(self.group_name,
                                                                 {"type": "new_unread_count", "sender": user_pk,
                                                                  "unread_count": new_unreads})
@@ -283,16 +283,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         else:
                             logger.info(f"Will save file message from {self.user} to {recipient}")
                             msg = await save_file_message(file, from_=self.user, to=recipient)
-                            await self._after_message_save(msg, rid=rid, user_pk=user_pk)
+                            await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
                             logger.info(f"Sending file message for file {file_id} from {self.user} to {recipient}")
                             # We don't need to send random_id here because we've already saved the file to db
-                            await self.channel_layer.group_send(recipient.pk, {"type": "new_file_message",
-                                                                               "db_id": msg.pid,
-                                                                               "file": serialize_file_model(file),
-                                                                               "sender": self.sender_username,
-                                                                               "receiver": user_pk,
-                                                                               "sender_name": self.user.display_name,
-                                                                               "sender_photo": image_url(self.user)})
+                            await self.channel_layer.group_send(str(recipient.pk), {"type": "new_file_message",
+                                                                                    "db_id": msg.pid,
+                                                                                    "file": serialize_file_model(file),
+                                                                                    "sender": self.sender_username,
+                                                                                    "receiver": user_pk,
+                                                                                    "sender_name": self.user.display_name,
+                                                                                    "sender_photo": image_url(self.user)})
 
             elif msg_type == MessageTypes.TextMessage:
                 data: MessageTypeTextMessage
@@ -330,16 +330,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         # considered delivered only when it's saved to database and received a proper id,
                         # which is then broadcast separately both to sender & receiver.
                         logger.info(f"Validation passed, sending text message from {self.group_name} to {recipient.pk}")
-                        await self.channel_layer.group_send(recipient.pk, {"type": "new_text_message",
-                                                                           "random_id": rid,
-                                                                           "text": text,
-                                                                           "sender": self.sender_username,
-                                                                           "receiver": user_pk,
-                                                                           "sender_name": self.user.display_name,
-                                                                           "sender_photo": image_url(self.user)})
+                        await self.channel_layer.group_send(str(recipient.pk), {"type": "new_text_message",
+                                                                                "random_id": rid,
+                                                                                "text": text,
+                                                                                "sender": self.sender_username,
+                                                                                "receiver": user_pk,
+                                                                                "sender_name": self.user.display_name,
+                                                                                "sender_photo": image_url(self.user)})
                         logger.info(f"Will save text message from {self.user} to {recipient}")
                         msg = await save_text_message(text, from_=self.user, to=recipient)
-                        await self._after_message_save(msg, rid=rid, user_pk=user_pk)
+                        await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
 
     # Receive message from WebSocket
     async def receive(self, text_data=None, bytes_data=None):
