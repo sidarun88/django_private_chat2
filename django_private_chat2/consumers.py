@@ -64,6 +64,7 @@ class MessageTypes(enum.IntEnum):
     MessageIdCreated = 8
     NewUnreadCount = 9
     TypingStopped = 10
+    Heartbeat = 11
 
 
 @database_sync_to_async
@@ -224,6 +225,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         if str(d) != self.group_name:
                             await self.channel_layer.group_send(str(d), {"type": "stopped_typing",
                                                                          "user_pk": str(self.sender_username)})
+                return None
+            elif msg_type == MessageTypes.Heartbeat:
+                await self.heartbeat_received(sender=self.user)
                 return None
             elif msg_type == MessageTypes.MessageRead:
                 data: MessageTypeMessageRead
@@ -482,3 +486,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Returns sender's extra data as dict to be included along with messages
         """
         raise NotImplementedError('subclasses of ChatConsumer must provide a sender_metadata() method')
+
+    async def heartbeat_received(self, sender: AbstractBaseUser):
+        """
+        Logic to update user's online status goes here
+        """
+        raise NotImplementedError('subclasses of ChatConsumer must provide a heartbeat_received() method')
