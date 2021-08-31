@@ -227,8 +227,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                                                          "user_pk": str(self.sender_username)})
                 return None
             elif msg_type == MessageTypes.Heartbeat:
-                await self.heartbeat_received(sender=self.user)
-                return None
+                response = await self.heartbeat_received(sender=self.user, data=data)
+                return response
             elif msg_type == MessageTypes.MessageRead:
                 data: MessageTypeMessageRead
                 if 'user_pk' not in data:
@@ -487,7 +487,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """
         raise NotImplementedError('subclasses of ChatConsumer must provide a sender_metadata() method')
 
-    async def heartbeat_received(self, sender: AbstractBaseUser):
+    async def heartbeat_received(self, sender: AbstractBaseUser, data: Dict[str, str]) -> Optional[ErrorDescription]:
         """
         Logic to update user's online status goes here
         """
