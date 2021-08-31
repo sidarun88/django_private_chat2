@@ -193,6 +193,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     if not recipient:
                         return ErrorTypes.InvalidUserPk, f"User with username {user_pk} does not exist"
                     else:
+                        logger.info(f"User {self.user.pk} is typing to {recipient.pk}, sending 'is_typing' to {recipient}")
                         await self.channel_layer.group_send(str(recipient.pk), {"type": "is_typing",
                                                                                 "user_pk": str(self.sender_username)})
                 else:
@@ -213,6 +214,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     if not recipient:
                         return ErrorTypes.InvalidUserPk, f"User with username {user_pk} does not exist"
                     else:
+                        logger.info(f"User {self.user.pk} hast stopped typing to {recipient.pk}, sending 'stopped_typing' to {recipient}")
                         await self.channel_layer.group_send(str(recipient.pk), {"type": "stopped_typing",
                                                                                 "user_pk": str(self.sender_username)})
                 else:
