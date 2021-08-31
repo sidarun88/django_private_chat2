@@ -124,16 +124,8 @@ def save_file_message(file: UploadedFile, from_: AbstractBaseUser, to: AbstractB
     return MessageModel.objects.create(file=file, sender=from_, recipient=to)
 
 
-def image_url(user: AbstractBaseUser) -> str:
-    if hasattr(user, 'profile_photo'):
-        if user.profile_photo:
-            if settings.DEBUG:
-                return 'http://127.0.0.1:8000{url}'.format(url=user.profile_photo.url)
-            return 'https://{domain}{url}'.format(
-                domain=settings.ALLOWED_HOSTS[0],
-                url=user.profile_photo.url,
-            )
-    return ""
+def event_extra_metadata(event, excluded_keys) -> dict:
+    return {k: v for k, v in event.items() if k not in excluded_keys}
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -291,8 +283,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                                                                     "file": serialize_file_model(file),
                                                                                     "sender": self.sender_username,
                                                                                     "receiver": user_pk,
-                                                                                    "sender_name": self.user.display_name,
-                                                                                    "sender_photo": image_url(self.user)})
+                                                                                    **self.sender_metadata(sender=self.user)})
 
             elif msg_type == MessageTypes.TextMessage:
                 data: MessageTypeTextMessage
@@ -335,8 +326,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                                                                 "text": text,
                                                                                 "sender": self.sender_username,
                                                                                 "receiver": user_pk,
-                                                                                "sender_name": self.user.display_name,
-                                                                                "sender_photo": image_url(self.user)})
+                                                                                **self.sender_metadata(sender=self.user)})
                         logger.info(f"Will save text message from {self.user} to {recipient}")
                         msg = await save_text_message(text, from_=self.user, to=recipient)
                         await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
@@ -371,31 +361,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps(error_data))
 
     async def new_unread_count(self, event):
+        excluded_keys = ('msg_type', 'sender', 'unread_count')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.NewUnreadCount,
                 'sender': event['sender'],
-                'unread_count': event['unread_count']
+                'unread_count': event['unread_count'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def message_read(self, event):
+        excluded_keys = ('msg_type', 'message_id', 'sender', 'receiver')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.MessageRead,
                 'message_id': event['message_id'],
                 'sender': event['sender'],
-                'receiver': event['receiver']
+                'receiver': event['receiver'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def message_id_created(self, event):
+        excluded_keys = ('msg_type', 'random_id', 'db_id')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.MessageIdCreated,
                 'random_id': event['random_id'],
-                'db_id': event['db_id']
+                'db_id': event['db_id'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def new_text_message(self, event):
+        excluded_keys = ('msg_type', 'db_id', 'text', 'sender', 'receiver')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.TextMessage,
@@ -403,11 +400,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "text": event['text'],
                 "sender": event['sender'],
                 "receiver": event['receiver'],
-                "sender_name": event['sender_name'],
-                "sender_photo": event['sender_photo'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def new_file_message(self, event):
+        excluded_keys = ('msg_type', 'db_id', 'file', 'sender', 'receiver')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.FileMessage,
@@ -415,34 +412,47 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "file": event['file'],
                 "sender": event['sender'],
                 "receiver": event['receiver'],
-                "sender_name": event['sender_name'],
-                "sender_photo": event['sender_photo'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def is_typing(self, event):
+        excluded_keys = ('msg_type', 'user_pk')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.IsTyping,
-                'user_pk': event['user_pk']
+                'user_pk': event['user_pk'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def stopped_typing(self, event):
+        excluded_keys = ('msg_type', 'user_pk')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.TypingStopped,
-                'user_pk': event['user_pk']
+                'user_pk': event['user_pk'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def user_went_online(self, event):
+        excluded_keys = ('msg_type', 'user_pk')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.WentOnline,
-                'user_pk': event['user_pk']
+                'user_pk': event['user_pk'],
+                **event_extra_metadata(event, excluded_keys),
             }))
 
     async def user_went_offline(self, event):
+        excluded_keys = ('msg_type', 'user_pk')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.WentOffline,
-                'user_pk': event['user_pk']
+                'user_pk': event['user_pk'],
+                **event_extra_metadata(event, excluded_keys),
             }))
+
+    def sender_metadata(self, sender: AbstractBaseUser) -> dict:
+        """
+        Returns sender's extra data as dict to be included along with messages
+        """
+        raise NotImplementedError('subclasses of ChatConsumer must provide a sender_metadata() method')
