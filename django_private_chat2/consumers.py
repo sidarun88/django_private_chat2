@@ -184,20 +184,44 @@ class ChatConsumer(AsyncWebsocketConsumer):
             logger.info(f"Ignoring message {msg_type.name}")
         else:
             if msg_type == MessageTypes.IsTyping:
-                dialogs = await get_groups_to_add(self.user)
-                logger.info(f"User {self.user.pk} is typing, sending 'is_typing' to {dialogs} dialog groups")
-                for d in dialogs:
-                    if str(d) != self.group_name:
-                        await self.channel_layer.group_send(str(d), {"type": "is_typing",
-                                                                     "user_pk": str(self.sender_username)})
+                if 'user_pk' in data and not isinstance(data['user_pk'], str):
+                    return ErrorTypes.MessageParsingError, "'user_pk' should be a string"
+                elif 'user_pk' in data:
+                    user_pk = data['user_pk']
+                    recipient: Optional[AbstractBaseUser] = await get_user_by_username(user_pk)
+                    logger.info(f"DB check if user {user_pk} exists resulted in {recipient}")
+                    if not recipient:
+                        return ErrorTypes.InvalidUserPk, f"User with username {user_pk} does not exist"
+                    else:
+                        await self.channel_layer.group_send(str(recipient.pk), {"type": "is_typing",
+                                                                                "user_pk": str(self.sender_username)})
+                else:
+                    dialogs = await get_groups_to_add(self.user)
+                    logger.info(f"User {self.user.pk} is typing, sending 'is_typing' to {dialogs} dialog groups")
+                    for d in dialogs:
+                        if str(d) != self.group_name:
+                            await self.channel_layer.group_send(str(d), {"type": "is_typing",
+                                                                         "user_pk": str(self.sender_username)})
                 return None
             elif msg_type == MessageTypes.TypingStopped:
-                dialogs = await get_groups_to_add(self.user)
-                logger.info(f"User {self.user.pk} has stopped typing, sending 'stopped_typing' to {dialogs} dialog groups")
-                for d in dialogs:
-                    if str(d) != self.group_name:
-                        await self.channel_layer.group_send(str(d), {"type": "stopped_typing",
-                                                                     "user_pk": str(self.sender_username)})
+                if 'user_pk' in data and not isinstance(data['user_pk'], str):
+                    return ErrorTypes.MessageParsingError, "'user_pk' should be a string"
+                elif 'user_pk' in data:
+                    user_pk = data['user_pk']
+                    recipient: Optional[AbstractBaseUser] = await get_user_by_username(user_pk)
+                    logger.info(f"DB check if user {user_pk} exists resulted in {recipient}")
+                    if not recipient:
+                        return ErrorTypes.InvalidUserPk, f"User with username {user_pk} does not exist"
+                    else:
+                        await self.channel_layer.group_send(str(recipient.pk), {"type": "stopped_typing",
+                                                                                "user_pk": str(self.sender_username)})
+                else:
+                    dialogs = await get_groups_to_add(self.user)
+                    logger.info(f"User {self.user.pk} has stopped typing, sending 'stopped_typing' to {dialogs} dialog groups")
+                    for d in dialogs:
+                        if str(d) != self.group_name:
+                            await self.channel_layer.group_send(str(d), {"type": "stopped_typing",
+                                                                         "user_pk": str(self.sender_username)})
                 return None
             elif msg_type == MessageTypes.MessageRead:
                 data: MessageTypeMessageRead
