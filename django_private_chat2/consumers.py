@@ -361,7 +361,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps(error_data))
 
     async def new_unread_count(self, event):
-        excluded_keys = ('msg_type', 'sender', 'unread_count')
+        excluded_keys = ('msg_type', 'sender', 'unread_count', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.NewUnreadCount,
@@ -371,7 +371,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def message_read(self, event):
-        excluded_keys = ('msg_type', 'message_id', 'sender', 'receiver')
+        excluded_keys = ('msg_type', 'message_id', 'sender', 'receiver', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.MessageRead,
@@ -382,7 +382,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def message_id_created(self, event):
-        excluded_keys = ('msg_type', 'random_id', 'db_id')
+        excluded_keys = ('msg_type', 'random_id', 'db_id', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.MessageIdCreated,
@@ -392,7 +392,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def new_text_message(self, event):
-        excluded_keys = ('msg_type', 'db_id', 'text', 'sender', 'receiver')
+        excluded_keys = ('msg_type', 'db_id', 'text', 'sender', 'receiver', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.TextMessage,
@@ -404,7 +404,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def new_file_message(self, event):
-        excluded_keys = ('msg_type', 'db_id', 'file', 'sender', 'receiver')
+        excluded_keys = ('msg_type', 'db_id', 'file', 'sender', 'receiver', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.FileMessage,
@@ -416,7 +416,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def is_typing(self, event):
-        excluded_keys = ('msg_type', 'user_pk')
+        excluded_keys = ('msg_type', 'user_pk', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.IsTyping,
@@ -425,7 +425,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def stopped_typing(self, event):
-        excluded_keys = ('msg_type', 'user_pk')
+        excluded_keys = ('msg_type', 'user_pk', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.TypingStopped,
@@ -434,7 +434,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def user_went_online(self, event):
-        excluded_keys = ('msg_type', 'user_pk')
+        excluded_keys = ('msg_type', 'user_pk', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.WentOnline,
@@ -443,7 +443,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def user_went_offline(self, event):
-        excluded_keys = ('msg_type', 'user_pk')
+        excluded_keys = ('msg_type', 'user_pk', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.WentOffline,
