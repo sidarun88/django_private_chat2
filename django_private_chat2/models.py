@@ -71,6 +71,19 @@ class MessageModel(TimeStampedModel, SoftDeletableModel):
     text = models.TextField(verbose_name=_("Text"), blank=True)
     file = models.ForeignKey(UploadedFile, related_name='message', on_delete=models.DO_NOTHING,
                              verbose_name=_("File"), blank=True, null=True)
+    preview_title = models.CharField(
+        blank=True,
+        max_length=100,
+        verbose_name=_('preview title'),
+    )
+    preview_description = models.TextField(
+        blank=True,
+        verbose_name=_('preview description'),
+    )
+    preview_thumbnail = models.URLField(
+        blank=True,
+        verbose_name=_('preview thumbnail'),
+    )
     pid = models.UUIDField(
         unique=True,
         editable=False,

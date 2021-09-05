@@ -116,8 +116,8 @@ def get_unread_count(sender, recipient) -> Awaitable[int]:
 
 
 @database_sync_to_async
-def save_text_message(text: str, from_: AbstractBaseUser, to: AbstractBaseUser) -> Awaitable[MessageModel]:
-    return MessageModel.objects.create(text=text, sender=from_, recipient=to)
+def save_text_message(text: str, from_: AbstractBaseUser, to: AbstractBaseUser, **kwargs) -> Awaitable[MessageModel]:
+    return MessageModel.objects.create(text=text, sender=from_, recipient=to, **kwargs)
 
 
 @database_sync_to_async
@@ -351,14 +351,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         # considered delivered only when it's saved to database and received a proper id,
                         # which is then broadcast separately both to sender & receiver.
                         logger.info(f"Validation passed, sending text message from {self.group_name} to {recipient.pk}")
+                        preview_data = {key: value for key, value in data.items() if "preview" in key}
                         await self.channel_layer.group_send(str(recipient.pk), {"type": "new_text_message",
                                                                                 "random_id": rid,
                                                                                 "text": text,
                                                                                 "sender": self.sender_username,
                                                                                 "receiver": user_pk,
+                                                                                **preview_data,
                                                                                 **self.sender_metadata(sender=self.user)})
                         logger.info(f"Will save text message from {self.user} to {recipient}")
-                        msg = await save_text_message(text, from_=self.user, to=recipient)
+                        msg = await save_text_message(text, from_=self.user, to=recipient, **preview_data)
                         await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
 
     # Receive message from WebSocket
