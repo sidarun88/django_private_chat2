@@ -424,7 +424,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def new_text_message(self, event):
-        excluded_keys = ('msg_type', 'db_id', 'text', 'sender', 'receiver', 'type')
+        excluded_keys = ('msg_type', 'random_id', 'text', 'sender', 'receiver', 'type')
         await self.send(
             text_data=json.dumps({
                 'msg_type': MessageTypes.TextMessage,
