@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import random
 
 from django.db import models
 from django.conf import settings
 from django.utils.translation import ugettext as _
-from django.utils.timezone import localtime
+from django.utils import timezone
 from model_utils.models import TimeStampedModel, SoftDeletableModel, SoftDeletableManager
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth import get_user_model
@@ -12,6 +13,12 @@ from django.db.models import Q
 import uuid
 
 UserModel: AbstractBaseUser = get_user_model()
+
+
+def generate_random_number():
+    current_time = int(timezone.now().timestamp())
+    random_number = random.randint(1, 1000)
+    return int(f"{current_time}{random_number}") * -1
 
 
 def user_directory_path(instance, filename):
@@ -89,6 +96,10 @@ class MessageModel(TimeStampedModel, SoftDeletableModel):
         editable=False,
         default=uuid.uuid4,
         verbose_name=_("public id")
+    )
+    random_id = models.BigIntegerField(
+        default=generate_random_number,
+        verbose_name=_("random id")
     )
 
     read = models.BooleanField(verbose_name=_("Read"), default=False)

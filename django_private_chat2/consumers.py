@@ -116,8 +116,8 @@ def get_unread_count(sender, recipient) -> Awaitable[int]:
 
 
 @database_sync_to_async
-def save_text_message(text: str, from_: AbstractBaseUser, to: AbstractBaseUser, **kwargs) -> Awaitable[MessageModel]:
-    return MessageModel.objects.create(text=text, sender=from_, recipient=to, **kwargs)
+def save_text_message(text: str, from_: AbstractBaseUser, to: AbstractBaseUser, rid: int, **kwargs) -> Awaitable[MessageModel]:
+    return MessageModel.objects.create(text=text, sender=from_, recipient=to, random_id=rid, **kwargs)
 
 
 @database_sync_to_async
@@ -360,7 +360,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                                                                 **preview_data,
                                                                                 **self.sender_metadata(sender=self.user)})
                         logger.info(f"Will save text message from {self.user} to {recipient}")
-                        msg = await save_text_message(text, from_=self.user, to=recipient, **preview_data)
+                        msg = await save_text_message(text, from_=self.user, to=recipient, rid=rid, **preview_data)
                         await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
 
     # Receive message from WebSocket
