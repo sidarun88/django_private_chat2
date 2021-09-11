@@ -308,12 +308,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
                             logger.info(f"Sending file message for file {file_id} from {self.user} to {recipient}")
                             # We don't need to send random_id here because we've already saved the file to db
-                            await self.channel_layer.group_send(str(recipient.pk), {"type": "new_file_message",
-                                                                                    "db_id": str(msg.pid),
-                                                                                    "file": serialize_file_model(file),
-                                                                                    "sender": self.sender_username,
-                                                                                    "receiver": user_pk,
-                                                                                    **self.sender_metadata(sender=self.user)})
+                            file_message_event = {
+                                "type": "new_file_message",
+                                "db_id": str(msg.pid),
+                                "file": serialize_file_model(file),
+                                "sender": self.sender_username,
+                                "receiver": user_pk,
+                                "sender_channel_name": self.channel_name,
+                                **self.sender_metadata(sender=self.user)
+                            }
+                            await self.channel_layer.group_send(str(recipient.pk), file_message_event)
+                            await self.channel_layer.group_send(self.group_name, file_message_event)
 
             elif msg_type == MessageTypes.TextMessage:
                 data: MessageTypeTextMessage
@@ -352,13 +357,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         # which is then broadcast separately both to sender & receiver.
                         logger.info(f"Validation passed, sending text message from {self.group_name} to {recipient.pk}")
                         preview_data = {key: value for key, value in data.items() if "preview" in key}
-                        await self.channel_layer.group_send(str(recipient.pk), {"type": "new_text_message",
-                                                                                "random_id": rid,
-                                                                                "text": text,
-                                                                                "sender": self.sender_username,
-                                                                                "receiver": user_pk,
-                                                                                **preview_data,
-                                                                                **self.sender_metadata(sender=self.user)})
+                        text_message_event = {
+                            "type": "new_text_message",
+                            "random_id": rid,
+                            "text": text,
+                            "sender": self.sender_username,
+                            "receiver": user_pk,
+                            "sender_channel_name": self.channel_name,
+                            **preview_data,
+                            **self.sender_metadata(sender=self.user)
+                        }
+                        await self.channel_layer.group_send(str(recipient.pk), text_message_event)
+                        await self.channel_layer.group_send(self.group_name, text_message_event)
                         logger.info(f"Will save text message from {self.user} to {recipient}")
                         msg = await save_text_message(text, from_=self.user, to=recipient, rid=rid, **preview_data)
                         await self._after_message_save(msg, rid=rid, user_pk=str(recipient.pk))
@@ -424,28 +434,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def new_text_message(self, event):
-        excluded_keys = ('msg_type', 'random_id', 'text', 'sender', 'receiver', 'type')
-        await self.send(
-            text_data=json.dumps({
-                'msg_type': MessageTypes.TextMessage,
-                "random_id": event['random_id'],
-                "text": event['text'],
-                "sender": event['sender'],
-                "receiver": event['receiver'],
-                **event_extra_metadata(event, excluded_keys),
-            }))
+        if self.channel_name != event['sender_channel_name']:
+            excluded_keys = ('msg_type', 'random_id', 'text', 'sender', 'receiver', 'type', 'sender_channel_name')
+            await self.send(
+                text_data=json.dumps({
+                    'msg_type': MessageTypes.TextMessage,
+                    "random_id": event['random_id'],
+                    "text": event['text'],
+                    "sender": event['sender'],
+                    "receiver": event['receiver'],
+                    **event_extra_metadata(event, excluded_keys),
+                })
+            )
 
     async def new_file_message(self, event):
-        excluded_keys = ('msg_type', 'db_id', 'file', 'sender', 'receiver', 'type')
-        await self.send(
-            text_data=json.dumps({
-                'msg_type': MessageTypes.FileMessage,
-                "db_id": event['db_id'],
-                "file": event['file'],
-                "sender": event['sender'],
-                "receiver": event['receiver'],
-                **event_extra_metadata(event, excluded_keys),
-            }))
+        if self.channel_name != event['sender_channel_name']:
+            excluded_keys = ('msg_type', 'db_id', 'file', 'sender', 'receiver', 'type', 'sender_channel_name')
+            await self.send(
+                text_data=json.dumps({
+                    'msg_type': MessageTypes.FileMessage,
+                    "db_id": event['db_id'],
+                    "file": event['file'],
+                    "sender": event['sender'],
+                    "receiver": event['receiver'],
+                    **event_extra_metadata(event, excluded_keys),
+                })
+            )
 
     async def is_typing(self, event):
         excluded_keys = ('msg_type', 'user_pk', 'type')
