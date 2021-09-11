@@ -315,7 +315,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                 "sender": self.sender_username,
                                 "receiver": user_pk,
                                 "sender_channel_name": self.channel_name,
-                                **self.sender_metadata(sender=self.user)
+                                **self.sender_metadata(sender=self.user),
+                                **self.receiver_metadata(receiver=recipient),
                             }
                             await self.channel_layer.group_send(str(recipient.pk), file_message_event)
                             await self.channel_layer.group_send(self.group_name, file_message_event)
@@ -365,7 +366,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             "receiver": user_pk,
                             "sender_channel_name": self.channel_name,
                             **preview_data,
-                            **self.sender_metadata(sender=self.user)
+                            **self.sender_metadata(sender=self.user),
+                            **self.receiver_metadata(receiver=recipient),
                         }
                         await self.channel_layer.group_send(str(recipient.pk), text_message_event)
                         await self.channel_layer.group_send(self.group_name, text_message_event)
@@ -502,6 +504,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Returns sender's extra data as dict to be included along with messages
         """
         raise NotImplementedError('subclasses of ChatConsumer must provide a sender_metadata() method')
+
+    def receiver_metadata(self, receiver: AbstractBaseUser) -> dict:
+        """
+        Returns sender's extra data as dict to be included along with messages
+        """
+        raise NotImplementedError('subclasses of ChatConsumer must provide a receiver_metadata() method')
 
     async def heartbeat_received(self, sender: AbstractBaseUser, data: Dict[str, str]) -> Optional[ErrorDescription]:
         """
