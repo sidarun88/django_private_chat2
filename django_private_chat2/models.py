@@ -3,7 +3,7 @@ import random
 
 from django.db import models
 from django.conf import settings
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from django.utils import timezone
 from model_utils.models import TimeStampedModel, SoftDeletableModel, SoftDeletableManager
 from django.contrib.auth.models import AbstractBaseUser
